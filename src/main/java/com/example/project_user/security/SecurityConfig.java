@@ -10,6 +10,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.http.HttpMethod;
 
+@EnableWebSecurity 
 @Configuration
 public class SecurityConfig {
     private final RestAuthHandlers restAuthHandlers;
@@ -34,16 +35,36 @@ public class SecurityConfig {
                 .authenticationEntryPoint(restAuthHandlers)
                 .accessDeniedHandler(restAuthHandlers)
             )
+            // ✅ 기본 로그인/폼 완전히 비활성화 (기본 비밀번호 로그 방지)
+            .httpBasic(b -> b.disable())
+            .formLogin(f -> f.disable())
+
             .authorizeHttpRequests(auth -> auth
-                // 정적 리소스 및 SPA 엔트리포인트는 모두 허용
-                .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.ico", "/logo.png", "/vite.svg").permitAll()
-                // 공개 엔드포인트
-                .requestMatchers("/health", "/auth/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // 다른 사용자 루틴 읽기 전용 공개(요구사항) + 닉네임 조회 공개
-                .requestMatchers(HttpMethod.GET, "/routines", "/routines/*", "/members/lookup").permitAll()
+                // ✅ 헬스/인포/문서 공개 (헬스체크용)
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/health").permitAll()
+
+                // ✅ Auth 공개
+                .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
+
+                // 공개 조회
+                .requestMatchers(HttpMethod.GET, "/members/lookup").permitAll()
+                // 주의: Spring Security의 Ant 패턴은 정규식 {id:\d+} 못 씀. 간단히 * 또는 /** 사용.
+                .requestMatchers(HttpMethod.GET, "/members/*").permitAll()
+
+                // 인증 필요한 경로
+                .requestMatchers(HttpMethod.GET,    "/members/me", "/members/me/**").authenticated()
+                .requestMatchers(HttpMethod.PATCH,  "/members/me/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/members/me").authenticated()
+
+                // 그 외 전부 인증
                 .anyRequest().authenticated()
             )
+
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 }
+

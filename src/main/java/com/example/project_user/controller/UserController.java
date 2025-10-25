@@ -29,14 +29,14 @@ public class UserController {
     private final UserRepository userRepository;
 
     /** 회원 생성 (계획서: /auth/register) */
-    @PostMapping(path = "/register", value = "/register") // 유지: /members/register (동작), 별도 AuthController 추가 예정
-    @Operation(summary = "회원 생성(임시)")
-    public ApiResponse<UserRes> create(@RequestBody @Valid UserCreateReq req) {
-        User u = userService.create(req);
-        return ApiResponse.ok(new UserRes(
-                u.getId(), u.getEmail(), u.getUsername(), u.getNickname(), u.getCreatedAt()
-        ), "CREATED");
-    }
+    // @PostMapping(path = "/register", value = "/register") // 유지: /members/register (동작), 별도 AuthController 추가 예정
+    // @Operation(summary = "회원 생성(임시)")
+    // public ApiResponse<UserRes> create(@RequestBody @Valid UserCreateReq req) {
+    //     User u = userService.create(req);
+    //     return ApiResponse.ok(new UserRes(
+    //             u.getId(), u.getEmail(), u.getUsername(), u.getNickname(), u.getCreatedAt()
+    //     ), "CREATED");
+    // }
 
     /** 단건 조회 */
     @GetMapping("/{id}")
