@@ -1,5 +1,5 @@
 package com.example.project_user.security;
-
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -39,28 +39,24 @@ public class SecurityConfig {
             .httpBasic(b -> b.disable())
             .formLogin(f -> f.disable())
 
-            .authorizeHttpRequests(auth -> auth
-                // ✅ 헬스/인포/문서 공개 (헬스체크용)
-                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
-                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/health").permitAll()
-
-                // ✅ Auth 공개
-                .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
-
-                // 공개 조회
-                .requestMatchers(HttpMethod.GET, "/members/lookup").permitAll()
-                // 주의: Spring Security의 Ant 패턴은 정규식 {id:\d+} 못 씀. 간단히 * 또는 /** 사용.
-                .requestMatchers(HttpMethod.GET, "/members/*").permitAll()
-
-                // 인증 필요한 경로
+           .authorizeHttpRequests(auth -> auth
+                // 1) 민감 경로는 먼저 잠그기
                 .requestMatchers(HttpMethod.GET,    "/members/me", "/members/me/**").authenticated()
                 .requestMatchers(HttpMethod.PATCH,  "/members/me/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/members/me").authenticated()
 
-                // 그 외 전부 인증
+                // 2) 공개 경로만 허용
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/health").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/members/lookup").permitAll()
+
+
                 .anyRequest().authenticated()
             )
+
+
 
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 

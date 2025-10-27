@@ -32,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/health",
             "/auth/register", "/auth/login",
             "/members/lookup",
-            "/members/*" // 단건 공개 조회를 허용한 경우
+            //"/members/*" // 단건 공개 조회를 허용한 경우
             // 게이트웨이 프리픽스가 있다면 아래도 추가 (예: /v1 프록시)
             // "/v1/actuator/health", "/v1/actuator/health/**", "/v1/actuator/info",
             // "/v1/swagger-ui.html", "/v1/swagger-ui/**", "/v1/v3/api-docs/**",
@@ -63,30 +63,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(
-            @NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+        String uri = request.getRequestURI();
+        // 진입 로그
+        System.out.println("[JWT] filter entered, uri=" + uri);
 
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             try {
-                JwtUserPrincipal principal = tokenProvider.parsePrincipal(token);
+                JwtUserPrincipal principal = tokenProvider.parsePrincipal(token); // 여기서 exp/서명 검증 포함돼야 함
                 Authentication auth = new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
                 ((UsernamePasswordAuthenticationToken) auth)
                         .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                // ✅ 유효 토큰인 경우에만 컨텍스트 세팅
-                // (유효하지 않으면 clear 하고 그냥 다음 필터로 넘겨 401 대신 200 공개 엔드포인트 통과)
-                // 유효하지 않은 토큰이더라도 공개 엔드포인트면 shouldNotFilter로 이미 스킵됨
                 org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+                System.out.println("[JWT] authenticated userId=" + principal.userId());
             } catch (Exception ex) {
+                System.out.println("[JWT] invalid token: " + ex.getMessage());
                 org.springframework.security.core.context.SecurityContextHolder.clearContext();
             }
         }
-
         filterChain.doFilter(request, response);
     }
+
 }
